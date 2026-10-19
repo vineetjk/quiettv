@@ -16,7 +16,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check the scripts
         run: |
@@ -39,7 +39,7 @@ jobs:
           done
           echo "lists ok"
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -62,7 +62,7 @@ jobs:
           echo "$manifest" | grep -q 'android.intent.category.HOME' || { echo "HOME intent filter missing"; exit 1; }
           echo "$manifest" | grep -q 'android.accessibilityservice.AccessibilityService' || { echo "Home guard missing"; exit 1; }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: quiettv-test-build
           path: out/quiettv.apk
@@ -74,7 +74,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Is this version released yet?
         id: version
@@ -89,7 +89,7 @@ jobs:
           fi
 
       - if: steps.version.outputs.new == 'true'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
