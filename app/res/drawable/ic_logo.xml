@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- QuietTV logo: a crescent moon on a calm indigo-to-teal screen. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:pathData="M14,4 H34 A10,10 0 0,1 44,14 V34 A10,10 0 0,1 34,44 H14 A10,10 0 0,1 4,34 V14 A10,10 0 0,1 14,4 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="4" android:startY="4" android:endX="44" android:endY="44">
+                <item android:offset="0" android:color="#FF7C83FD" />
+                <item android:offset="1" android:color="#FF2DD4BF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group>
+        <path android:pathData="M22.53,14.14 A8,8 0 1,0 31.6,24.5 A7,7 0 0,1 22.53,14.14 Z" android:fillColor="#FFFFFFFF" />
+        <path android:pathData="M33.5,12.2 A1.3,1.3 0 1,0 33.5,14.8 A1.3,1.3 0 1,0 33.5,12.2 Z" android:fillColor="#E6FFFFFF" />
+        <path android:pathData="M18,37.5 H30" android:strokeColor="#8CFFFFFF" android:strokeWidth="2.4" android:strokeLineCap="round" />
+    </group>
+</vector>

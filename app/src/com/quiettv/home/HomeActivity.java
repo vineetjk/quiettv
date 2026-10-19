@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
@@ -26,6 +27,7 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -45,7 +47,9 @@ public class HomeActivity extends Activity {
             PLAY = "shortcut:play", STOCK = "shortcut:stock", NET = "shortcut:net";
 
     private LinearLayout column;
-    private TextView clock, date, status;
+    private TextView clock, date, netText, memText;
+    private ImageView netIcon, memIcon;
+    private boolean chipFocused;
     private boolean dirty = true, resumed;
     private String focusKey;
 
@@ -63,10 +67,8 @@ public class HomeActivity extends Activity {
         super.onCreate(b);
         applyConfig(getIntent());
 
-        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[] {0xFF161D2A, 0xFF0B0E14});
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackground(bg);
+        scroll.setBackground(Ui.background(this));
         scroll.setFillViewport(true);
         scroll.setVerticalScrollBarEnabled(false);
         scroll.setClipChildren(false);
@@ -74,7 +76,7 @@ public class HomeActivity extends Activity {
         column.setOrientation(LinearLayout.VERTICAL);
         column.setClipChildren(false);
         column.setClipToPadding(false);
-        column.setPadding(dp(48), dp(28), dp(48), dp(28));
+        column.setPadding(dp(56), dp(30), dp(56), dp(24));
         scroll.addView(column, new ViewGroup.LayoutParams(-1, -2));
         setContentView(scroll);
 
@@ -125,7 +127,8 @@ public class HomeActivity extends Activity {
         // Out of sight: let go of the banner bitmaps. They're redrawn when Home is pressed again.
         if (level >= TRIM_MEMORY_UI_HIDDEN && !resumed && column != null) {
             column.removeAllViews();
-            clock = date = status = null;
+            clock = date = netText = memText = null;
+            netIcon = memIcon = null;
             dirty = true;
         }
     }
@@ -151,56 +154,58 @@ public class HomeActivity extends Activity {
         column.removeAllViews();
         column.addView(header());
 
-        int contentW = getResources().getDisplayMetrics().widthPixels - dp(96);
+        int contentW = getResources().getDisplayMetrics().widthPixels - dp(112);
         int gap = dp(18);
         int w = (contentW - gap * (COLS - 1)) / COLS;
         int h = w * 9 / 16;
 
-        column.addView(sectionTitle("Apps"));
+        // "YOUR APPS" on the left, the how-to hint on the right of the same line.
+        LinearLayout appsHead = new LinearLayout(this);
+        appsHead.setGravity(Gravity.BOTTOM);
+        appsHead.addView(Ui.section(this, "Your apps"), new LinearLayout.LayoutParams(0, -2, 1));
+        TextView hint = Ui.text(this, "Hold OK on an app to move or remove it", 12, Ui.FAINT);
+        hint.setPadding(0, 0, dp(2), dp(12));
+        appsHead.addView(hint);
+        column.addView(appsHead);
         List<Tile> apps = new ArrayList<>();
         for (String pkg : Apps.homeList(this)) {
-            Tile t = new Tile(this, pkg, w, h, Apps.banner(this, pkg, w, h), Apps.icon(this, pkg, dp(36)),
-                    Apps.label(this, pkg), true);
+            Drawable banner = Apps.banner(this, pkg, w, h);
+            Tile t = banner != null ? new Tile(this, pkg, w, h, Tile.BANNER, banner, Apps.label(this, pkg))
+                    : new Tile(this, pkg, w, h, Tile.APP, Apps.icon(this, pkg, dp(36)), Apps.label(this, pkg));
             t.setOnClickListener(v -> launch(pkg));
             t.setOnLongClickListener(v -> { appMenu(pkg); return true; });
             apps.add(t);
         }
-        Tile add = new Tile(this, ADD, w, h, null, null, "+  Add app", false);
+        Tile add = new Tile(this, ADD, w, h, Tile.ADD, Ui.icon(this, R.drawable.ic_add, Ui.MUTED), "Add app");
         add.setOnClickListener(v -> pickApp());
         apps.add(add);
         addRows(apps, w, h, gap);
 
-        column.addView(sectionTitle("Inputs & more"));
-        int sh = h * 2 / 3;
+        column.addView(Ui.section(this, "Inputs & more"));
+        int sh = Math.max(h * 2 / 3, dp(66));
         List<Tile> more = new ArrayList<>();
         for (TvInputInfo in : hdmiInputs()) {
             final String id = in.getId();
-            Tile t = new Tile(this, "input:" + id, w, sh, null, null, inputLabel(in), false);
+            Tile t = new Tile(this, "input:" + id, w, sh, Tile.SHORTCUT, Ui.icon(this, R.drawable.ic_hdmi, Ui.TEXT), inputLabel(in));
             t.setOnClickListener(v -> openInput(id));
             more.add(t);
         }
-        more.add(shortcut(SETTINGS, "Settings", w, sh, v -> startSafely(new Intent(Settings.ACTION_SETTINGS))));
+        more.add(shortcut(SETTINGS, R.drawable.ic_settings, "Settings", w, sh, v -> startSafely(new Intent(Settings.ACTION_SETTINGS))));
         if (Apps.installed(this, "com.android.vending"))
-            more.add(shortcut(PLAY, "Play Store", w, sh, v -> launch("com.android.vending")));
-        more.add(shortcut(ALL, "All apps", w, sh, v -> startActivity(new Intent(this, AppsActivity.class))));
+            more.add(shortcut(PLAY, R.drawable.ic_play, "Play Store", w, sh, v -> launch("com.android.vending")));
+        more.add(shortcut(ALL, R.drawable.ic_apps, "All apps", w, sh, v -> startActivity(new Intent(this, AppsActivity.class))));
         final ComponentName stock = Apps.stockHome(this);
         if (stock != null)
-            more.add(shortcut(STOCK, "Original home", w, sh, v -> openStockHome(stock)));
+            more.add(shortcut(STOCK, R.drawable.ic_home, "Original home", w, sh, v -> openStockHome(stock)));
         addRows(more, w, sh, gap);
 
-        TextView hint = new TextView(this);
-        hint.setText("Hold OK (or press Menu) on an app to move or remove it.");
-        hint.setTextColor(0x66E8ECF4);
-        hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        hint.setPadding(0, dp(20), 0, 0);
-        column.addView(hint);
 
         updateClock();
         restoreFocus(apps);
     }
 
-    private Tile shortcut(String key, String title, int w, int h, View.OnClickListener l) {
-        Tile t = new Tile(this, key, w, h, null, null, title, false);
+    private Tile shortcut(String key, int icon, String title, int w, int h, View.OnClickListener l) {
+        Tile t = new Tile(this, key, w, h, Tile.SHORTCUT, Ui.icon(this, icon, Ui.TEXT), title);
         t.setOnClickListener(l);
         return t;
     }
@@ -217,59 +222,76 @@ public class HomeActivity extends Activity {
                 row.addView(tiles.get(j), lp);
             }
             LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
-            rp.bottomMargin = dp(6);
+            rp.bottomMargin = dp(4);
             column.addView(row, rp);
         }
     }
 
+    /** The clock on the left; the QuietTV logo and a network/memory chip on the right. */
     private View header() {
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.TOP);
+
         LinearLayout left = new LinearLayout(this);
         left.setOrientation(LinearLayout.VERTICAL);
-        clock = new TextView(this);
-        clock.setTextColor(0xFFF4F6FA);
-        clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 64);
-        clock.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
-        clock.setIncludeFontPadding(false);
-        date = new TextView(this);
-        date.setTextColor(0xB3E8ECF4);
-        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-        date.setPadding(dp(4), dp(4), 0, 0);
+        clock = Ui.text(this, "", 66, Ui.TEXT);
+        clock.setTypeface(Typeface.create("sans-serif-thin", Typeface.NORMAL));
+        date = Ui.text(this, "", 18, Ui.MUTED);
+        date.setPadding(dp(4), dp(10), 0, 0);
         left.addView(clock);
         left.addView(date);
         bar.addView(left, new LinearLayout.LayoutParams(0, -2, 1));
 
-        status = new TextView(this);
-        status.setTextColor(0xCCE8ECF4);
-        status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        status.setPadding(dp(14), dp(8), dp(14), dp(8));
-        status.setFocusable(true);
-        final GradientDrawable chip = new GradientDrawable();
-        chip.setCornerRadius(dp(18));
-        chip.setColor(0x221C2230);
-        status.setBackground(chip);
-        status.setOnFocusChangeListener((v, has) -> {
-            chip.setColor(has ? Tile.CARD_FOCUS : 0x221C2230);
-            chip.setStroke(has ? dp(2) : 0, 0xFFFFFFFF);
-        });
-        status.setOnClickListener(v -> startSafely(new Intent(Settings.ACTION_WIFI_SETTINGS)));
-        bar.addView(status);
+        LinearLayout right = new LinearLayout(this);
+        right.setOrientation(LinearLayout.VERTICAL);
+        right.setGravity(Gravity.END);
+        LinearLayout brand = new LinearLayout(this);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.ic_logo);
+        brand.addView(logo, new LinearLayout.LayoutParams(dp(30), dp(30)));
+        TextView word = Ui.text(this, Ui.wordmark(), 21, Ui.TEXT);
+        word.setPadding(dp(10), 0, dp(2), 0);
+        brand.addView(word);
+        right.addView(brand);
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-2, -2);
+        cp.topMargin = dp(16);
+        right.addView(statusChip(), cp);
+        bar.addView(right);
+
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.bottomMargin = dp(18);
+        lp.bottomMargin = dp(8);
         bar.setLayoutParams(lp);
         return bar;
     }
 
-    private TextView sectionTitle(String s) {
-        TextView t = new TextView(this);
-        t.setText(s);
-        t.setTextColor(0x99E8ECF4);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        t.setPadding(dp(2), dp(14), 0, dp(10));
-        return t;
+    /** Network and free memory. Focusable: OK opens network settings. */
+    private View statusChip() {
+        final LinearLayout chip = new LinearLayout(this);
+        chip.setGravity(Gravity.CENTER_VERTICAL);
+        chip.setPadding(dp(14), dp(8), dp(16), dp(8));
+        chip.setFocusable(true);
+        final GradientDrawable bg = Ui.card(this, 20);
+        chip.setBackground(bg);
+        netIcon = new ImageView(this);
+        chip.addView(netIcon, new LinearLayout.LayoutParams(dp(18), dp(18)));
+        netText = Ui.text(this, "", 14, Ui.TEXT);
+        netText.setPadding(dp(8), 0, dp(16), 0);
+        chip.addView(netText);
+        memIcon = new ImageView(this);
+        chip.addView(memIcon, new LinearLayout.LayoutParams(dp(18), dp(18)));
+        memText = Ui.text(this, "", 14, Ui.MUTED);
+        memText.setPadding(dp(8), 0, 0, 0);
+        chip.addView(memText);
+        chip.setOnFocusChangeListener((v, has) -> {
+            chipFocused = has;
+            bg.setColor(has ? Ui.FOCUS_BG : Ui.CARD);
+            bg.setStroke(has ? 0 : Math.max(1, dp(1)), Ui.CARD_EDGE);
+            updateClock();
+        });
+        chip.setOnClickListener(v -> startSafely(new Intent(Settings.ACTION_WIFI_SETTINGS)));
+        return chip;
     }
 
     private void restoreFocus(List<Tile> apps) {
@@ -297,7 +319,17 @@ public class HomeActivity extends Activity {
         clock.setText(DateFormat.getTimeFormat(this).format(now));
         String pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEEdMMMM");
         date.setText(DateFormat.format(pattern, now));
-        status.setText(network() + "   ·   " + freeMemory() + " free");
+        if (netText == null) return;
+        int fg = chipFocused ? Ui.FOCUS_FG : Ui.TEXT, fg2 = chipFocused ? Ui.FOCUS_FG : Ui.MUTED;
+        String net = network();
+        int res = net.equals("Offline") ? R.drawable.ic_offline
+                : net.equals("Ethernet") ? R.drawable.ic_ethernet : R.drawable.ic_wifi;
+        netIcon.setImageDrawable(Ui.icon(this, res, fg));
+        netText.setText(net);
+        netText.setTextColor(fg);
+        memIcon.setImageDrawable(Ui.icon(this, R.drawable.ic_memory, fg2));
+        memText.setText(freeMemory() + " free");
+        memText.setTextColor(fg2);
     }
 
     private String network() {

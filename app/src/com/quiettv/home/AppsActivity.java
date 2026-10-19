@@ -3,12 +3,14 @@ package com.quiettv.home;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -26,26 +28,30 @@ public class AppsActivity extends Activity {
         final boolean pick = getIntent().getBooleanExtra(PICK, false);
 
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[] {0xFF161D2A, 0xFF0B0E14}));
+        scroll.setBackground(Ui.background(this));
         scroll.setClipChildren(false);
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setClipChildren(false);
         col.setClipToPadding(false);
-        col.setPadding(dp(48), dp(32), dp(48), dp(32));
+        col.setPadding(dp(56), dp(34), dp(56), dp(32));
         scroll.addView(col, new ViewGroup.LayoutParams(-1, -2));
 
-        TextView title = new TextView(this);
-        title.setText(pick ? "Choose an app to add" : "All apps");
-        title.setTextColor(0xFFF4F6FA);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView glyph = new ImageView(this);
+        glyph.setImageDrawable(Ui.icon(this, pick ? R.drawable.ic_add : R.drawable.ic_apps, Ui.ACCENT));
+        head.addView(glyph, new LinearLayout.LayoutParams(dp(28), dp(28)));
+        TextView title = Ui.text(this, pick ? "Choose an app to add" : "All apps", 30, Ui.TEXT);
         title.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
-        title.setPadding(0, 0, 0, dp(20));
-        col.addView(title);
+        title.setPadding(dp(14), 0, 0, 0);
+        head.addView(title);
+        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(-1, -2);
+        hp.bottomMargin = dp(26);
+        col.addView(head, hp);
 
         int gap = dp(18);
-        int w = (getResources().getDisplayMetrics().widthPixels - dp(96) - gap * (COLS - 1)) / COLS;
+        int w = (getResources().getDisplayMetrics().widthPixels - dp(112) - gap * (COLS - 1)) / COLS;
         int h = w * 9 / 16;
         List<String> pkgs = Apps.launchable(this);
         if (pick) pkgs.removeAll(Apps.homeList(this));
@@ -59,11 +65,12 @@ public class AppsActivity extends Activity {
                 row.setClipChildren(false);
                 row.setClipToPadding(false);
                 LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
-                rp.bottomMargin = dp(6);
+                rp.bottomMargin = dp(4);
                 col.addView(row, rp);
             }
-            Tile t = new Tile(this, pkg, w, h, Apps.banner(this, pkg, w, h), Apps.icon(this, pkg, dp(36)),
-                    Apps.label(this, pkg), true);
+            Drawable banner = Apps.banner(this, pkg, w, h);
+            Tile t = banner != null ? new Tile(this, pkg, w, h, Tile.BANNER, banner, Apps.label(this, pkg))
+                    : new Tile(this, pkg, w, h, Tile.APP, Apps.icon(this, pkg, dp(36)), Apps.label(this, pkg));
             t.setOnClickListener(v -> {
                 if (pick) {
                     setResult(RESULT_OK, new Intent().putExtra(PICK, pkg));
@@ -90,10 +97,7 @@ public class AppsActivity extends Activity {
             if (first == null) first = t;
         }
         if (pkgs.isEmpty()) {
-            TextView none = new TextView(this);
-            none.setText("Every app is already on your home screen.");
-            none.setTextColor(0xB3E8ECF4);
-            none.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            TextView none = Ui.text(this, "Every app is already on your home screen.", 16, Ui.MUTED);
             col.addView(none);
         }
         setContentView(scroll);

@@ -1,12 +1,19 @@
-# QuietTV
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg">
+  <img src="docs/logo.svg" alt="QuietTV" width="360">
+</picture>
 
 **A calm, fast home screen for Android TV and Google TV that doesn't break your TV.**
 
 <img src="docs/home-screen.png" alt="The QuietTV home screen: a clock, your apps, HDMI inputs and a few shortcuts" width="100%">
 
+</div>
+
 QuietTV is two things:
 
-- **A tiny home screen** (a 29 KB app using 30–50 MB of RAM; Google TV's own home screen used ~130 MB on the same TV). It shows a clock, your apps, your HDMI inputs, Settings and nothing else. No ads, no rows, no autoplay trailers, no account.
+- **A tiny home screen** (a 43 KB app using 30–50 MB of RAM; Google TV's own home screen used ~130 MB on the same TV). It shows a clock, your apps, your HDMI inputs, Settings and nothing else. No ads, no rows, no autoplay trailers, no account.
 - **A careful cleanup script** (`quiettv.sh`). It turns off junk apps and slow settings, asks before every change, and writes each change to a list on the TV so it can be undone from any computer.
 
 ## Why another one?
@@ -91,6 +98,8 @@ Please add your TV with a pull request, including what worked and what didn't.
   - `HomeActivity`: the home screen.
   - `AppsActivity`: all apps, and the app picker for **Add app**.
   - `HomeGuard`: the accessibility service.
+  - `Ui` and `Tile`: the look (colors, background glow, focus style).
+  - `res/drawable`: the logo and line icons, as vector drawables. `docs/logo.svg` is the same logo for the web.
 - `quiettv.sh`: the script, in POSIX `sh`. It runs on macOS and Linux, and on Windows with Git Bash.
 - `lists/`: what's protected and what's safe to turn off.
 - `docs/RESEARCH.md`: why it works this way, with sources from the Android source code.
