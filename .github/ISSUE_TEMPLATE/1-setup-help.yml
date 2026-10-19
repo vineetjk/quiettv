@@ -25,6 +25,7 @@ body:
     attributes:
       label: How were you setting it up?
       options:
+        - QuietTV Setup phone app
         - By hand with quiettv.sh
         - With an AI assistant (Claude Code, Codex, ...)
         - Something else
@@ -58,7 +59,7 @@ body:
     id: report
     attributes:
       label: Report
-      description: Run `sh quiettv.sh report <TV_IP>` and paste what it prints. It leaves out your IP address. If you can't connect at all, paste the output of `adb devices` instead.
+      description: In the phone app, "Get help" copies this for you, so just paste. With a computer, run `sh quiettv.sh report <TV_IP>` and paste what it prints. It leaves out your IP address.
       render: markdown
   - type: textarea
     id: extra

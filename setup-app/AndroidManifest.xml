@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- QuietTV Setup: the phone app that sets up a TV over Wi-Fi. Its version comes from app/AndroidManifest.xml. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.quiettv.setup">
+
+    <!-- To talk to the TV's debugging port on your Wi-Fi, and to download QuietTV from GitHub. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- To find this phone's Wi-Fi address, so it can look for TVs next to it. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application android:label="@string/app_name" android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:theme="@android:style/Theme.Material.NoActionBar">
+        <activity android:name=".SetupActivity" android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

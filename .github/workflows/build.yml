@@ -1,5 +1,7 @@
-# Checks every push and pull request. On main, when app/AndroidManifest.xml has a versionName that
-# hasn't been released yet, builds the signed APK and publishes it as a GitHub Release (vX.Y.Z).
+# Checks every push and pull request. On main:
+#  - when app/AndroidManifest.xml has a versionName that hasn't been released yet, builds both apps
+#    (the TV home screen and the QuietTV Setup phone app), signs them and publishes a GitHub Release;
+#  - publishes the setup guide in site/ to GitHub Pages.
 # To release: bump android:versionCode and android:versionName, then push to main.
 name: build
 
@@ -61,11 +63,17 @@ jobs:
           manifest=$("$BT/aapt2" dump xmltree out/quiettv.apk --file AndroidManifest.xml)
           echo "$manifest" | grep -q 'android.intent.category.HOME' || { echo "HOME intent filter missing"; exit 1; }
           echo "$manifest" | grep -q 'android.accessibilityservice.AccessibilityService' || { echo "Home guard missing"; exit 1; }
+          "$BT/apksigner" verify out/quiettv-setup.apk
+          "$BT/aapt2" dump badging out/quiettv-setup.apk | head -1
+          setup=$("$BT/aapt2" dump xmltree out/quiettv-setup.apk --file AndroidManifest.xml)
+          echo "$setup" | grep -q 'android.intent.category.LAUNCHER' || { echo "Setup app launcher entry missing"; exit 1; }
 
       - uses: actions/upload-artifact@v7
         with:
           name: quiettv-test-build
-          path: out/quiettv.apk
+          path: |
+            out/quiettv.apk
+            out/quiettv-setup.apk
 
   release:
     needs: check
@@ -108,6 +116,7 @@ jobs:
           KEYSTORE="$RUNNER_TEMP/release.jks" KEYSTORE_PASS="$RELEASE_KEYSTORE_PASS" sh build.sh
           rm -f "$RUNNER_TEMP/release.jks"
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs out/quiettv.apk | head -3
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify out/quiettv-setup.apk
 
       - name: Publish the release
         if: steps.version.outputs.new == 'true'
@@ -116,12 +125,47 @@ jobs:
           V: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p dist/quiettv/lists
-          cp out/quiettv.apk dist/
-          (cd dist && sha256sum quiettv.apk > quiettv.apk.sha256)
+          cp out/quiettv.apk out/quiettv-setup.apk dist/
+          (cd dist && sha256sum quiettv.apk > quiettv.apk.sha256 && sha256sum quiettv-setup.apk > quiettv-setup.apk.sha256)
           # A ready-to-use folder: the script, its lists and the app. No build tools needed.
           cp quiettv.sh README.md LICENSE dist/quiettv/
           cp lists/*.txt dist/quiettv/lists/
           cp out/quiettv.apk dist/quiettv/
           (cd dist && zip -qr "quiettv-$V.zip" quiettv)
-          gh release create "v$V" dist/quiettv.apk dist/quiettv.apk.sha256 "dist/quiettv-$V.zip" \
+          gh release create "v$V" dist/quiettv.apk dist/quiettv.apk.sha256 \
+            dist/quiettv-setup.apk dist/quiettv-setup.apk.sha256 "dist/quiettv-$V.zip" \
             --title "QuietTV $V" --generate-notes --target "$GITHUB_SHA"
+
+  pages:
+    needs: [check, release]
+    # After a release (or when there wasn't one), so the site can carry the latest APK.
+    if: >-
+      !cancelled() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' &&
+      needs.check.result == 'success' && (needs.release.result == 'success' || needs.release.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assemble the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p _site
+          cp site/index.html _site/
+          cp docs/logo-dark.svg docs/icon.svg docs/home-screen.png _site/
+          # A copy of the latest home screen app, for installing with the Downloader app on the TV.
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern quiettv.apk --dir _site || echo "No release yet"
+
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v5

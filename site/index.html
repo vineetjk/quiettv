@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuietTV: set up your TV</title>
+<meta name="description" content="A simple, fast home screen for Android TV and Google TV. Step-by-step setup from your phone or computer.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta property="og:title" content="QuietTV">
+<meta property="og:description" content="A simple, fast home screen for Android TV and Google TV.">
+<meta property="og:image" content="home-screen.png">
+<style>
+  :root {
+    --bg: #0b0f17; --bg2: #111827; --card: #161d2a; --edge: #232c3d;
+    --text: #f2f5fa; --muted: #a6b0c0; --faint: #6b7587;
+    --teal: #2dd4bf; --teal-soft: #5eead4; --indigo: #7c83fd; --on-teal: #042f2e; --warn: #fbbf24;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-image:
+      radial-gradient(900px 500px at 8% -10%, rgba(45, 212, 191, .16), transparent 60%),
+      radial-gradient(900px 600px at 100% 20%, rgba(99, 102, 241, .14), transparent 60%);
+    background-repeat: no-repeat;
+  }
+  a { color: var(--teal-soft); }
+  img { max-width: 100%; }
+  body { overflow-x: hidden; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+  header img { height: 34px; display: block; }
+  nav a { color: var(--muted); text-decoration: none; margin-left: 18px; font-size: 15px; }
+  nav a:hover { color: var(--text); }
+
+  .hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 28px 0 8px; align-items: center; }
+  @media (min-width: 880px) { .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); padding-top: 48px; } }
+  h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.12; font-weight: 300; margin: 0 0 14px; letter-spacing: -.5px; }
+  h1 b { font-weight: 600; color: var(--teal-soft); }
+  .lead { color: var(--muted); font-size: 18px; margin: 0 0 24px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 12px; padding: 13px 20px; font-weight: 600; font-size: 16px; text-decoration: none;
+    border: 1px solid #3a4558; color: var(--text); background: transparent; cursor: pointer;
+  }
+  .btn.primary { background: var(--teal); color: var(--on-teal); border-color: var(--teal); }
+  .btn:hover { filter: brightness(1.08); }
+  .tv { border-radius: 14px; border: 8px solid #05070b; box-shadow: 0 20px 60px rgba(0,0,0,.55); width: 100%; display: block; }
+
+  .facts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 40px 0; }
+  @media (min-width: 720px) { .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .fact { background: var(--card); border: 1px solid var(--edge); border-radius: var(--radius); padding: 18px; }
+  .fact h3 { margin: 0 0 6px; font-size: 16px; }
+  .fact p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  section { padding: 28px 0; }
+  h2 { font-size: 28px; font-weight: 400; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+
+  .guide { background: var(--bg2); border: 1px solid var(--edge); border-radius: 20px; padding: 22px; }
+  .progress { display: flex; gap: 6px; margin-bottom: 18px; }
+  .progress span { flex: 1; height: 4px; border-radius: 4px; background: var(--edge); }
+  .progress span.on { background: var(--teal); }
+  .step-title { font-size: 22px; margin: 0 0 14px; font-weight: 500; }
+  .choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  @media (min-width: 720px) { .choices.three { grid-template-columns: repeat(3, minmax(0, 1fr)); } .choices.two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .choice {
+    text-align: left; background: var(--card); color: var(--text); border: 1px solid var(--edge);
+    border-radius: 14px; padding: 16px; cursor: pointer; font: inherit;
+  }
+  .choice strong { display: block; font-size: 17px; margin-bottom: 4px; }
+  .choice span { color: var(--muted); font-size: 14px; }
+  .choice:hover, .choice:focus-visible { border-color: var(--teal); outline: none; }
+  .choice.sel { border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal) inset; }
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; }
+  ol.steps li { counter-increment: s; position: relative; padding: 4px 0 14px 44px; }
+  ol.steps li::before {
+    content: counter(s); position: absolute; left: 0; top: 2px; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--teal); color: var(--on-teal); font-weight: 700; font-size: 14px; display: grid; place-items: center;
+  }
+  .note { color: var(--muted); font-size: 14px; border-left: 3px solid var(--edge); padding: 4px 0 4px 12px; margin: 8px 0 0; }
+  .note.warn { border-color: var(--warn); }
+  .nav-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  pre {
+    background: #05070b; border: 1px solid var(--edge); border-radius: 12px; padding: 14px; overflow-x: auto;
+    font-size: 14px; line-height: 1.5; margin: 10px 0; position: relative;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .copy { position: absolute; top: 8px; right: 8px; font-size: 12px; padding: 4px 10px; border-radius: 8px;
+    background: var(--card); color: var(--muted); border: 1px solid var(--edge); cursor: pointer; }
+  .tabs { display: flex; gap: 6px; margin: 4px 0 6px; flex-wrap: wrap; }
+  .tabs button { background: var(--card); color: var(--muted); border: 1px solid var(--edge); border-radius: 10px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: 14px; }
+  .tabs button.sel { color: var(--text); border-color: var(--teal); }
+
+  form.help { display: grid; gap: 12px; max-width: 640px; }
+  label { font-size: 14px; color: var(--muted); display: grid; gap: 6px; }
+  input, select, textarea {
+    font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--edge);
+    border-radius: 10px; padding: 11px 12px; width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--teal); }
+  textarea { min-height: 110px; resize: vertical; }
+  details { background: var(--card); border: 1px solid var(--edge); border-radius: 14px; padding: 14px 16px; margin: 0 0 10px; }
+  summary { cursor: pointer; font-weight: 500; }
+  details p { color: var(--muted); margin: 10px 0 0; }
+  footer { color: var(--faint); font-size: 14px; padding: 36px 0 48px; text-align: center; }
+  .qr { display: none; align-items: center; gap: 14px; margin-top: 18px; color: var(--muted); font-size: 14px; }
+  .qr canvas, .qr img { background: #fff; border-radius: 8px; padding: 6px; }
+  @media (min-width: 880px) { .qr.ready { display: flex; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a href="./"><img src="logo-dark.svg" alt="QuietTV"></a>
+    <nav><a href="#guide">Set up</a><a href="#help">Help</a><a href="https://github.com/vineetjk/quiettv">GitHub</a></nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1>A <b>calm, fast</b> home screen for your Android TV</h1>
+      <p class="lead">Just your apps, your HDMI inputs and Settings. Junk apps switched off. Your TV's own home screen stays underneath, so nothing breaks, and everything can be undone.</p>
+      <div class="btns">
+        <a class="btn primary" href="#guide">Start the setup guide</a>
+        <a class="btn" href="https://github.com/vineetjk/quiettv">See the code</a>
+      </div>
+      <div class="qr" id="qr"><div id="qrcode"></div><span>Setting up from your phone?<br>Scan this to open the guide there.</span></div>
+    </div>
+    <img class="tv" src="home-screen.png" alt="The QuietTV home screen on a TV: a clock, a row of app tiles, HDMI inputs and Settings">
+  </div>
+
+  <div class="facts">
+    <div class="fact"><h3>Only what you use</h3><p>Your streaming apps, HDMI inputs and Settings. No ads, no rows of recommendations, no autoplaying trailers.</p></div>
+    <div class="fact"><h3>Junk off, nothing deleted</h3><p>Demo, ad and vendor apps are switched off, not uninstalled. You're asked about each one, and you can undo it all.</p></div>
+    <div class="fact"><h3>Doesn't break your TV</h3><p>Google TV's own home screen stays on. QuietTV just answers the Home button, which avoids the crash loops some tools cause.</p></div>
+  </div>
+
+  <section id="guide">
+    <h2>Set up QuietTV</h2>
+    <p class="sub">Four short steps. Have your TV remote nearby.</p>
+    <div class="guide" id="guide-box" aria-live="polite"></div>
+  </section>
+
+  <section id="help">
+    <h2>Stuck? We'll help</h2>
+    <p class="sub">Describe what happened. This opens a help request on GitHub with your answers filled in, where the author or someone from the community can help you.
+      If you used a computer, add the output of <code>sh quiettv.sh report &lt;TV_IP&gt;</code>. In the phone app, tap "Get help": it copies the details for you.</p>
+    <form class="help" id="help-form">
+      <label>TV brand and model<input name="tv" placeholder="e.g. Sony KD-55X80K, TCL C645, Chromecast with Google TV" required></label>
+      <label>Android / Google TV version (optional)<input name="android" placeholder="e.g. Google TV 14"></label>
+      <label>What happened?<textarea name="what" placeholder="What you did, what you expected, and what you saw instead." required></textarea></label>
+      <div><button class="btn primary" type="submit">Open a help request on GitHub</button></div>
+    </form>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    <details><summary>Is it safe?</summary><p>QuietTV only switches apps off (never deletes them) and never touches what the TV needs: Google Play, Settings, the keyboard, Bluetooth, HDMI inputs, or the TV's own home screen and setup app. Every change is recorded on the TV and can be undone with one tap in the phone app, or <code>sh quiettv.sh undo</code>.</p></details>
+    <details><summary>Which TVs does it work on?</summary><p>Android TV and Google TV: TVs from Sony, TCL, Hisense, Philips, Xiaomi, Acer and others, plus Chromecast with Google TV and Nvidia Shield. Not Roku, Samsung, LG or Fire TV's home screen. It's been tested on an Acer Google TV (Android 14). Please tell us how it goes on yours.</p></details>
+    <details><summary>I have an iPhone</summary><p>The phone app is Android only for now. Use a computer (Mac, Windows or Linux) instead; it takes about the same time.</p></details>
+    <details><summary>Why does it need "developer mode"?</summary><p>That's the only way an app on another device is allowed to switch off TV apps and set up the Home button. Your TV asks you to approve each phone or computer once, and you can remove that approval anytime in Developer options.</p></details>
+    <details><summary>How do I undo everything?</summary><p>In QuietTV Setup: "See what QuietTV changed", then "Undo everything". With a computer: <code>sh quiettv.sh undo &lt;TV_IP&gt;</code>. Your TV goes back exactly to how it was.</p></details>
+  </section>
+
+  <footer>QuietTV is free and open source (MIT). <a href="https://github.com/vineetjk/quiettv">github.com/vineetjk/quiettv</a></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+  var REPO = "https://github.com/vineetjk/quiettv";
+  var LATEST = REPO + "/releases/latest/download/";
+  var state = { step: 0, use: null, tv: null, os: "mac" };
+  var box = document.getElementById("guide-box");
+
+  var DEV = {
+    google: [
+      "On the TV, open <b>Settings</b> (the gear at the top right of the home screen).",
+      "Go to <b>System</b>, then <b>About</b>.",
+      "Scroll to <b>Android TV OS build</b> and press OK on it <b>7 times</b>, until it says you're a developer.",
+      "Go back to <b>System</b> and open <b>Developer options</b>.",
+      "Turn on <b>USB debugging</b>. If you also see <b>Network debugging</b> or <b>ADB over network</b>, turn that on too."
+    ],
+    android: [
+      "On the TV, open <b>Settings</b>, then <b>Device Preferences</b>, then <b>About</b>.",
+      "Scroll to <b>Build</b> and press OK on it <b>7 times</b>, until it says you're a developer.",
+      "Go back to <b>Device Preferences</b> and open <b>Developer options</b>.",
+      "Turn on <b>USB debugging</b>. If you also see <b>Network debugging</b> or <b>ADB over network</b>, turn that on too."
+    ]
+  };
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function bar() { var h = '<div class="progress">'; for (var i = 0; i < 4; i++) h += '<span class="' + (i <= state.step ? "on" : "") + '"></span>'; return h + "</div>"; }
+  function choice(group, value, title, hint) {
+    var sel = state[group] === value ? " sel" : "";
+    return '<button class="choice' + sel + '" data-group="' + group + '" data-value="' + value + '"><strong>' + title + "</strong><span>" + hint + "</span></button>";
+  }
+  function navRow(backOk, nextLabel, nextOk) {
+    return '<div class="nav-row">' + (backOk ? '<button class="btn" data-go="back">Back</button>' : "<span></span>") +
+      (nextLabel ? '<button class="btn primary" data-go="next"' + (nextOk ? "" : " disabled style=\"opacity:.5\"") + ">" + nextLabel + "</button>" : "") + "</div>";
+  }
+  function code(text) { return '<pre><button class="copy" data-copy>Copy</button><code>' + esc(text) + "</code></pre>"; }
+
+  function render() {
+    var h = bar();
+    if (state.step === 0) {
+      h += '<h3 class="step-title">1. What will you use to set it up?</h3><div class="choices three">' +
+        choice("use", "phone", "An Android phone", "Easiest. A free app does everything over Wi-Fi.") +
+        choice("use", "computer", "A computer", "Mac, Windows or Linux. Also works with AI assistants.") +
+        choice("use", "tv", "Only the TV", "Limited: installs the home screen, can't remove junk.") +
+        "</div>" + navRow(false, "Next", !!state.use);
+    } else if (state.step === 1) {
+      h += '<h3 class="step-title">2. Which TV do you have?</h3><div class="choices two">' +
+        choice("tv", "google", "Google TV", "Most TVs since 2021 (Sony, TCL, Hisense, Philips, Acer...) and Chromecast with Google TV. The home screen says \"For you\".") +
+        choice("tv", "android", "Android TV (older) or Xiaomi", "TVs and boxes from before Google TV. Settings has \"Device Preferences\".") +
+        "</div>" + '<p class="note">Not sure? Pick Google TV; if a menu isn\'t there, come back and try the other.</p>' + navRow(true, "Next", !!state.tv);
+    } else if (state.step === 2) {
+      h += '<h3 class="step-title">3. Turn on developer mode</h3>';
+      if (state.use === "tv") {
+        h += "<p>You can skip this step if you only use the TV.</p>";
+      } else {
+        h += '<ol class="steps">' + DEV[state.tv].map(function (s) { return "<li>" + s + "</li>"; }).join("") + "</ol>" +
+          '<p class="note">Write down your TV\'s <b>IP address</b>: Settings → Network &amp; Internet → your Wi-Fi network. It looks like 192.168.1.50.</p>' +
+          '<p class="note warn">Only see <b>Wireless debugging</b> with a pairing code? Turn on <b>USB debugging</b> as well; most TVs then accept connections. Pairing codes aren\'t supported yet.</p>';
+      }
+      h += navRow(true, "Next", true);
+    } else {
+      h += '<h3 class="step-title">4. Install QuietTV</h3>' + install() + navRow(true, null, false);
+    }
+    box.innerHTML = h;
+  }
+
+  function install() {
+    if (state.use === "phone") {
+      return '<ol class="steps">' +
+        '<li>On your Android phone, download <b>QuietTV Setup</b>:<div class="btns" style="margin-top:8px"><a class="btn primary" href="' + LATEST + 'quiettv-setup.apk">Download QuietTV Setup</a></div></li>' +
+        "<li>Open the downloaded file. If your phone asks, allow your browser to install apps.</li>" +
+        "<li>Open <b>QuietTV Setup</b>. Make sure the phone is on the same Wi-Fi as the TV.</li>" +
+        "<li>Follow the app: it finds your TV, asks you to press <b>Allow</b> on the TV once, and asks before every change.</li>" +
+        '</ol><p class="note">The app only connects while you use it. Nothing runs in the background, on the phone or on the TV. Android 8 or newer.</p>';
+    }
+    if (state.use === "computer") {
+      var os = state.os;
+      var adb = { mac: "brew install android-platform-tools", windows: "Download SDK Platform Tools from Google, unzip it,\nand run the commands below in Git Bash (gitforwindows.org).", linux: "sudo apt install adb    # or your distro's package" }[os];
+      return '<ol class="steps">' +
+        '<li>Install <b>adb</b>:<div class="tabs">' +
+          ["mac", "windows", "linux"].map(function (o) { return '<button data-os="' + o + '" class="' + (o === os ? "sel" : "") + '">' + { mac: "Mac", windows: "Windows", linux: "Linux" }[o] + "</button>"; }).join("") +
+        "</div>" + code(adb) + (os === "windows" ? '<a href="https://developer.android.com/tools/releases/platform-tools">SDK Platform Tools</a>' : "") + "</li>" +
+        '<li>Download and unzip QuietTV: <a href="' + REPO + '/releases/latest">latest release</a> (the <code>quiettv-*.zip</code> file).</li>' +
+        "<li>Open a terminal in the unzipped folder and run, with your TV's IP address:" + code("sh quiettv.sh scan    192.168.1.50   # see what's on the TV (changes nothing)\nsh quiettv.sh clean   192.168.1.50   # switch off junk apps, one by one\nsh quiettv.sh tune    192.168.1.50   # animations, screensaver, sleep timer\nsh quiettv.sh install 192.168.1.50   # the home screen") +
+        "The first time, the TV asks <b>Allow debugging?</b>: tick <b>Always allow</b> and press <b>Allow</b>.</li>" +
+        '</ol><p class="note">Using an AI coding assistant like Claude Code or Codex? Give it the ready-made prompt in <a href="' + REPO + '/blob/main/SETUP-WITH-AI.md">SETUP-WITH-AI.md</a>.</p>';
+    }
+    return '<ol class="steps">' +
+      "<li>On the TV, install the free <b>Downloader</b> app from the Play Store.</li>" +
+      "<li>In Downloader, type this address and install the app it downloads:" + code(location.origin + location.pathname.replace(/[^/]*$/, "") + "quiettv.apk") + "</li>" +
+      "<li>On <b>Android TV 12 or older</b>: open Settings → Accessibility → <b>QuietTV Home button</b> and turn it on. Home now opens QuietTV.</li>" +
+      '</ol><p class="note warn">On <b>Google TV 13 and newer</b>, Android blocks that Accessibility switch for apps installed this way ("Restricted setting"). QuietTV then works as an app, but Home won\'t open it. Junk apps can\'t be switched off without a phone or computer either. For the full setup, go back and pick <b>An Android phone</b>.</p>';
+  }
+
+  box.addEventListener("click", function (e) {
+    var t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.group) { state[t.dataset.group] = t.dataset.value; render(); return; }
+    if (t.dataset.os) { state.os = t.dataset.os; render(); return; }
+    if (t.dataset.go === "next") { if (t.disabled) return; state.step = Math.min(3, state.step + 1); render(); box.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    if (t.dataset.go === "back") { state.step = Math.max(0, state.step - 1); render(); return; }
+    if (t.hasAttribute("data-copy")) {
+      var txt = t.parentNode.querySelector("code").textContent;
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { t.textContent = "Copied"; setTimeout(function () { t.textContent = "Copy"; }, 1500); });
+    }
+  });
+  render();
+
+  document.getElementById("help-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target, tv = f.tv.value.trim(), android = f.android.value.trim(), what = f.what.value.trim();
+    var url = REPO + "/issues/new?template=1-setup-help.yml" +
+      "&title=" + encodeURIComponent("[Help] " + tv + ": " + what.split("\n")[0].slice(0, 60)) +
+      "&tv=" + encodeURIComponent(tv) + "&android=" + encodeURIComponent(android) + "&what=" + encodeURIComponent(what);
+    window.open(url, "_blank", "noopener");
+  });
+
+  try {
+    if (window.qrcode && window.matchMedia("(min-width: 880px)").matches) {
+      var q = qrcode(0, "M"); q.addData(location.href.split("#")[0] + "#guide"); q.make();
+      document.getElementById("qrcode").innerHTML = q.createImgTag(3, 0);
+      document.getElementById("qr").classList.add("ready");
+    }
+  } catch (err) { /* the QR code is optional */ }
+})();
+</script>
+</body>
+</html>

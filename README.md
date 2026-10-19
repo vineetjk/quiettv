@@ -28,6 +28,14 @@ QuietTV **leaves the TV's home screen alone**. It just catches the Home button a
 
 ## Install
 
+👉 **Step-by-step guide: [vineetjk.github.io/quiettv](https://vineetjk.github.io/quiettv/)**
+
+### Easiest: with an Android phone (new)
+
+Download **[QuietTV Setup](https://github.com/vineetjk/quiettv/releases/latest/download/quiettv-setup.apk)** on your phone and open it. It shows you how to turn on developer mode on the TV, finds the TV on your Wi-Fi, and then does the whole setup, asking before every change. Your phone just needs to be on the same Wi-Fi as the TV. The app is new: if anything goes wrong, its "Get help" button opens an issue with the details filled in.
+
+### With a computer
+
 You need a computer on the same Wi-Fi as your TV.
 
 1. **On the TV:** open Settings → System → About and press OK on *Build* seven times. Then go to *Developer options* and turn on **USB debugging** and **Network debugging**.
@@ -95,7 +103,9 @@ sh build.sh                       # needs Java 17 and the Android SDK (platform 
 sh quiettv.sh install <ip>        # installs your own build
 ```
 
-New versions are released automatically: bump the version in `app/AndroidManifest.xml` and push to `main`. GitHub Actions builds, signs and publishes it.
+`build.sh` makes two apps: `out/quiettv.apk` (the home screen, for the TV) and `out/quiettv-setup.apk` (QuietTV Setup, for phones). The phone app writes the same list of changes on the TV as `quiettv.sh`, so the two can be mixed.
+
+New versions are released automatically: bump the version in `app/AndroidManifest.xml` and push to `main`. GitHub Actions builds, signs and publishes both apps, and updates the [setup guide](https://vineetjk.github.io/quiettv/) (`site/`).
 
 ## Thanks
 
