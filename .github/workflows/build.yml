@@ -62,7 +62,7 @@ jobs:
           echo "$manifest" | grep -q 'android.intent.category.HOME' || { echo "HOME intent filter missing"; exit 1; }
           echo "$manifest" | grep -q 'android.accessibilityservice.AccessibilityService' || { echo "Home guard missing"; exit 1; }
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: quiettv-test-build
           path: out/quiettv.apk
