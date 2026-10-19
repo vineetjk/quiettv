@@ -1,0 +1,28 @@
+# Apps that are safe to turn off on Android TV / Google TV, when they're installed.
+# Format:  package | kind | what it is
+#   kind = junk     ads, store-demo and vendor extras nobody needs
+#          optional fine to turn off if you don't use it (QuietTV asks)
+# Nothing here is ever uninstalled; turning off is undone with: adb shell pm enable <package>
+# Add a line only for apps you've seen turned off without problems, and say on which TV.
+
+# --- Google (all Google TVs)
+com.google.android.feedback | junk | Google Feedback: sends bug reports to Google
+com.google.android.syncadapters.calendar | junk | Google Calendar sync, unused on a TV
+com.android.wallpaper.livepicker | junk | Live wallpaper picker, unused on a TV
+com.google.android.apps.tv.dreamx | optional | Ambient Mode screensaver (photos and art)
+com.google.android.play.games | optional | Google Play Games
+com.google.android.videos | optional | Google TV movie & show store (rent or buy films)
+com.google.android.youtube.tvmusic | optional | YouTube Music
+com.google.android.marvin.talkback | optional | TalkBack screen reader (keep it if anyone needs it)
+
+# --- Acer / MK / Realtek Google TVs (seen on Acer R3_GTV, Android 14)
+com.apps.mk.wd | junk | "S-Channel": sponsored content and ads, starts at every boot
+com.creative.fastscreen.tv | junk | FastCast screen mirroring, has built-in ads
+com.apps.scast | optional | Scast screen mirroring, starts at every boot
+com.apps.esticker | junk | Shop-display sticker (store demo mode)
+com.apps.esticker3 | junk | Shop-display sticker (store demo mode)
+com.apps.biz.ds | junk | Digital Signage mode for shops
+com.apps.biz.mt | junk | Meeting Mode for offices, starts at every boot
+com.apps.tvmanager | junk | "TV Manager" cleaner app
+com.mk.tv.timeclock | junk | World Clock app
+com.apps.wifihotspot | optional | Wi-Fi hotspot (share the TV's internet)

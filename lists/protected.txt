@@ -1,0 +1,82 @@
+# Apps QuietTV never turns off, whatever list it is given. One per line; * matches anything.
+# Apps Android keeps running all the time (PERSISTENT) are also never touched; that is checked on the TV.
+# If you're not sure an app is safe to turn off, it belongs here.
+
+# Android itself
+android
+com.android.systemui
+com.android.settings
+com.android.tv.settings
+com.android.shell
+com.android.providers.*
+com.android.externalstorage
+com.android.packageinstaller
+com.android.permissioncontroller
+com.android.networkstack*
+com.android.wifi*
+com.android.se
+com.android.inputdevices
+com.android.keychain
+com.android.location.fused
+com.android.intentresolver
+
+# Google essentials
+com.google.android.gms*
+com.google.android.gsf
+com.android.vending
+com.google.android.webview
+com.android.webview
+com.google.android.packageinstaller
+com.google.android.permissioncontroller
+com.google.android.ext.*
+com.google.android.tts
+com.google.android.tv.dfuservice
+
+# Home screens and setup. On some Google TVs turning off the Google TV home makes the
+# setup app take over Home and crashes Android (seen on Acer R3_GTV, TCL, Xiaomi).
+com.google.android.apps.tv.launcherx
+com.google.android.tvlauncher
+com.google.android.leanbacklauncher
+com.google.android.tungsten.setupwraith
+*setup*
+*provision*
+*setupwizard*
+
+# Keyboard, remote and Bluetooth
+*inputmethod*
+*keyboard*
+*virtualkey*
+com.android.bluetooth
+*bluetooth*
+*remote*
+*keyhandler*
+*keyintercept*
+*globalkey*
+com.google.android.tv.remote.service
+
+# TV inputs, HDMI, tuners and the Live TV framework
+com.android.tv
+com.android.tv.*
+*passthrough*
+*tvinput*
+*.tv.framework*
+*tuner*
+*hdmi*
+*cec*
+com.realtek.tv
+com.realtek.tv.*
+com.realtek.dtv
+com.realtek.dtmb
+*tvmidware*
+*tvservice*
+com.droidlogic.*
+com.mediatek.*
+
+# Power, updates and factory tools the TV needs to start and update
+*power*
+*energymode*
+*ota*
+*factory*
+*.overlay*
+*resoverlay*
+com.netflix.tokenmanager

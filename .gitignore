@@ -1,0 +1,4 @@
+out/
+# Your signing key: keep it (updates must be signed with it), but never publish it.
+*.jks
+.DS_Store
