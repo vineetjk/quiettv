@@ -1,0 +1,127 @@
+# Checks every push and pull request. On main, when app/AndroidManifest.xml has a versionName that
+# hasn't been released yet, builds the signed APK and publishes it as a GitHub Release (vX.Y.Z).
+# To release: bump android:versionCode and android:versionName, then push to main.
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the scripts
+        run: |
+          sh -n quiettv.sh
+          sh -n build.sh
+          shellcheck -S warning quiettv.sh build.sh
+
+      - name: Check the lists
+        run: |
+          # Every line of safe.txt is "package | junk|optional | description", and nothing in it is protected.
+          bad=$(grep -v '^[[:space:]]*#' lists/safe.txt | grep -v '^[[:space:]]*$' \
+            | awk -F'|' '{gsub(/ /,"",$1); gsub(/ /,"",$2); if (NF != 3 || $1 !~ /^[A-Za-z0-9_.]+$/ || ($2 != "junk" && $2 != "optional")) print}')
+          [ -z "$bad" ] || { echo "Malformed lines in lists/safe.txt:"; echo "$bad"; exit 1; }
+          for p in $(grep -v '^[[:space:]]*#' lists/safe.txt | cut -d'|' -f1 | tr -d ' ' | grep -v '^$'); do
+            while IFS= read -r pat; do
+              case "$pat" in ''|'#'*) continue ;; esac
+              # shellcheck disable=SC2254
+              case "$p" in $pat) echo "$p is in safe.txt but matches protected pattern $pat"; exit 1 ;; esac
+            done < lists/protected.txt
+          done
+          echo "lists ok"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android platform 34 and build-tools 34
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Build (with a throwaway key)
+        run: sh build.sh
+
+      - name: Check the APK
+        run: |
+          BT="$ANDROID_HOME/build-tools/34.0.0"
+          "$BT/apksigner" verify out/quiettv.apk
+          "$BT/aapt2" dump badging out/quiettv.apk | head -1
+          manifest=$("$BT/aapt2" dump xmltree out/quiettv.apk --file AndroidManifest.xml)
+          echo "$manifest" | grep -q 'android.intent.category.HOME' || { echo "HOME intent filter missing"; exit 1; }
+          echo "$manifest" | grep -q 'android.accessibilityservice.AccessibilityService' || { echo "Home guard missing"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quiettv-test-build
+          path: out/quiettv.apk
+
+  release:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is this version released yet?
+        id: version
+        run: |
+          v=$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' app/AndroidManifest.xml | head -1)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$v" > /dev/null; then
+            echo "v$v is already released; nothing to do."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.version.outputs.new == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build the signed APK
+        if: steps.version.outputs.new == 'true'
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASS }}
+        run: |
+          [ -n "$RELEASE_KEYSTORE_BASE64" ] || { echo "The RELEASE_KEYSTORE_BASE64 secret isn't set (forks can't release)."; exit 1; }
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          KEYSTORE="$RUNNER_TEMP/release.jks" KEYSTORE_PASS="$RELEASE_KEYSTORE_PASS" sh build.sh
+          rm -f "$RUNNER_TEMP/release.jks"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs out/quiettv.apk | head -3
+
+      - name: Publish the release
+        if: steps.version.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist/quiettv/lists
+          cp out/quiettv.apk dist/
+          (cd dist && sha256sum quiettv.apk > quiettv.apk.sha256)
+          # A ready-to-use folder: the script, its lists and the app. No build tools needed.
+          cp quiettv.sh README.md LICENSE dist/quiettv/
+          cp lists/*.txt dist/quiettv/lists/
+          cp out/quiettv.apk dist/quiettv/
+          (cd dist && zip -qr "quiettv-$V.zip" quiettv)
+          gh release create "v$V" dist/quiettv.apk dist/quiettv.apk.sha256 "dist/quiettv-$V.zip" \
+            --title "QuietTV $V" --generate-notes --target "$GITHUB_SHA"

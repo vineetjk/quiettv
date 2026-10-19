@@ -31,8 +31,11 @@ mkdir -p out/gen
 "$BT/aapt2" link -o out/base.apk -I "$JAR" --manifest app/AndroidManifest.xml --java out/gen \
   --min-sdk-version 26 --target-sdk-version 34 out/res/*.flat
 
+# File lists are split into arguments on purpose (no paths here contain spaces).
+# shellcheck disable=SC2046
 javac -nowarn -Xlint:-options -encoding UTF-8 -source 8 -target 8 \
   -bootclasspath "$JAR" -cp "$BT/core-lambda-stubs.jar" -d out/classes $(find app/src out/gen -name '*.java')
+# shellcheck disable=SC2046
 "$BT/d8" --min-api 26 --release --lib "$JAR" --output out/dex $(find out/classes -name '*.class')
 
 cp out/base.apk out/unsigned.apk

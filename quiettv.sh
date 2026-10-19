@@ -13,12 +13,12 @@
 # so `reapply` and `undo` work from any computer. Apps are turned off, never uninstalled. QuietTV never
 # turns off the TV's own home screen: on many Google TVs that crashes Android (see docs/RESEARCH.md).
 set -u
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
 PKG=com.quiettv.home
 GUARD=$PKG/$PKG.HomeGuard
 JOURNAL=/data/local/tmp/quiettv-journal.txt
-APK=out/quiettv.apk
+REPO=vineetjk/quiettv
 
 die() { echo "$*" >&2; exit 1; }
 
@@ -173,14 +173,30 @@ restrict_bg() {
 
 # ------------------------------------------------------------------------------------------ install
 
+# The APK to install: $QUIETTV_APK, your own build (out/), one next to this script (from a release zip),
+# or the latest release from GitHub, checked against its published SHA-256.
+find_apk() {
+  for f in "${QUIETTV_APK:-}" out/quiettv.apk quiettv.apk; do
+    [ -n "$f" ] && [ -f "$f" ] && { APK=$f; return; }
+  done
+  command -v curl >/dev/null 2>&1 || die "curl is needed to download QuietTV."
+  dir=$(mktemp -d)
+  echo "Downloading the latest QuietTV release..."
+  base=https://github.com/$REPO/releases/latest/download
+  curl -fsSL -o "$dir/quiettv.apk" "$base/quiettv.apk" && curl -fsSL -o "$dir/quiettv.apk.sha256" "$base/quiettv.apk.sha256" \
+    || die "Couldn't download QuietTV from github.com/$REPO/releases. Or build it yourself: sh build.sh"
+  want=$(cut -d' ' -f1 < "$dir/quiettv.apk.sha256")
+  if command -v sha256sum >/dev/null 2>&1; then got=$(sha256sum "$dir/quiettv.apk" | cut -d' ' -f1)
+  else got=$(shasum -a 256 "$dir/quiettv.apk" | cut -d' ' -f1); fi
+  [ -n "$want" ] && [ "$want" = "$got" ] || die "The download doesn't match its checksum. Not installing it."
+  APK=$dir/quiettv.apk
+}
+
 guard_on() { tv settings get secure enabled_accessibility_services | tr ':' '\n' | grep -qx "$GUARD"; }
 
 cmd_install() {
   apps=${1:-}
-  if [ ! -f "$APK" ]; then
-    echo "Building QuietTV..."
-    sh build.sh >/dev/null || die "Build failed. Run: sh build.sh"
-  fi
+  find_apk
   installed=0
   tv pm list packages "$PKG" | grep -qx "package:$PKG" && installed=1
   if [ $installed = 0 ]; then
@@ -188,7 +204,16 @@ cmd_install() {
     note "installed $PKG"
   fi
   echo "Installing... If the TV shows a Google Play Protect message, choose to install anyway."
-  adb -s "$TV" install -r "$APK" >/dev/null || die "Install failed."
+  if ! out=$(adb -s "$TV" install -r "$APK" 2>&1); then
+    case "$out" in
+      *UPDATE_INCOMPATIBLE*|*INCONSISTENT_CERTIFICATES*|*SIGNATURES_DO_NOT_MATCH*)
+        echo "The QuietTV on the TV was signed with a different key (for example, one you built yourself)."
+        ask "Remove it and install this one? Your app list resets and the Home guard is set up again." || return
+        adb -s "$TV" uninstall "$PKG" >/dev/null 2>&1
+        adb -s "$TV" install "$APK" >/dev/null || die "Install failed." ;;
+      *) echo "$out" >&2; die "Install failed." ;;
+    esac
+  fi
   # Android 13+ can block accessibility for sideloaded apps ("Restricted setting"). adb installs aren't
   # restricted, but allow it anyway in case the app was installed from a file manager.
   tv appops set "$PKG" ACCESS_RESTRICTED_SETTINGS allow >/dev/null 2>&1 || true
@@ -262,7 +287,9 @@ cmd_reapply() {
 
 cmd_status() {
   echo "Free memory: $(free_mb)"
-  if tv pm list packages "$PKG" | grep -qx "package:$PKG"; then echo "QuietTV: installed"; else echo "QuietTV: not installed"; fi
+  if tv pm list packages "$PKG" | grep -qx "package:$PKG"; then
+    echo "QuietTV: installed, version $(tv dumpsys package "$PKG" | sed -n 's/.*versionName=//p' | head -1)"
+  else echo "QuietTV: not installed"; fi
   if guard_on; then echo "Home button guard: on (Home opens QuietTV)"; else echo "Home button guard: off (Home opens the TV's own home screen)"; fi
   echo "TV's own home screen (left on): $(tv cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1)"
   echo
