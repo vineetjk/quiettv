@@ -8,6 +8,7 @@
 #   sh quiettv.sh status  <TV_IP>             what's changed, what the TV turned back on, free memory
 #   sh quiettv.sh reapply <TV_IP>             put back changes the TV undid (some TVs do at every restart)
 #   sh quiettv.sh undo    <TV_IP>             put everything back the way it was
+#   sh quiettv.sh report  <TV_IP>             details to paste into a GitHub issue if you need help
 #
 # Every change is asked about first (YES=1 answers yes to everything) and written to a list on the TV,
 # so `reapply` and `undo` work from any computer. Apps are turned off, never uninstalled. QuietTV never
@@ -20,9 +21,15 @@ GUARD=$PKG/$PKG.HomeGuard
 JOURNAL=/data/local/tmp/quiettv-journal.txt
 REPO=vineetjk/quiettv
 
-die() { echo "$*" >&2; exit 1; }
+HELP="https://github.com/$REPO/issues/new/choose"
 
-usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+die() {
+  echo "$*" >&2
+  echo "Need help? Run 'sh quiettv.sh report <TV_IP>' and open an issue: $HELP" >&2
+  exit 1
+}
+
+usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 connect() {
   case "$1" in
@@ -346,6 +353,54 @@ cmd_undo() {
   echo "Done. Your TV is back the way it was."
 }
 
+# ------------------------------------------------------------------------------------------ report
+
+# Everything a helper needs to understand a problem, as Markdown for a GitHub issue. Leaves out the
+# TV's IP address and anything personal; the list of apps it shows is only what QuietTV turned off.
+cmd_report() {
+  f=quiettv-report.txt
+  {
+    echo "### QuietTV report"
+    echo
+    echo '```'
+    echo "date:        $(date -u '+%Y-%m-%d %H:%M UTC')"
+    echo "computer:    $(uname -s) $(uname -m), adb $(adb version | sed -n 's/.*version \([0-9.]*\).*/\1/p' | head -1)"
+    echo "tv:          $(tv getprop ro.product.manufacturer) $(tv getprop ro.product.model) ($(tv getprop ro.product.device))"
+    echo "android:     $(tv getprop ro.build.version.release) (SDK $(tv getprop ro.build.version.sdk)), build $(tv getprop ro.build.id)"
+    echo "memory:      $(free_mb) free of $(tv cat /proc/meminfo | awk '/^MemTotal:/ {printf "%d MB", $2/1024}')"
+    v=$(tv dumpsys package "$PKG" | sed -n 's/.*versionName=//p' | head -1)
+    echo "quiettv:     ${v:-not installed}"
+    if guard_on; then echo "home guard:  on"; else echo "home guard:  off"; fi
+    echo "tv home:     $(tv cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1)"
+    echo "on screen:   $(tv dumpsys activity activities | grep -m1 ResumedActivity | grep -oE 'u0 [^ ]+' | cut -c4-)"
+    echo "a11y:        $(tv settings get secure enabled_accessibility_services)"
+    echo "crashes:     $(tv logcat -d -b crash | grep -c 'FATAL EXCEPTION IN SYSTEM') system crash(es) in the log since boot"
+    echo '```'
+    echo
+    echo "**Changes recorded by QuietTV:**"
+    echo
+    echo '```'
+    tv "cat $JOURNAL 2>/dev/null" | while read -r kind a b c d; do
+      case "$kind" in
+        off) if is_off "$a"; then echo "off      $a"; else echo "BACK ON  $a  ($(tv dumpsys package "$a" | grep -m1 -o 'lastDisabledCaller: .*'))"; fi ;;
+        setting) echo "setting  $a $b = $(tv settings get "$a" "$b") (want ${d:-?}, was $c)" ;;
+        bg) echo "bg       $a $(tv cmd appops get "$a" RUN_ANY_IN_BACKGROUND | head -1)" ;;
+        *) echo "$kind $a" ;;
+      esac
+    done
+    echo '```'
+    echo
+    echo "**Last QuietTV log lines:**"
+    echo
+    echo '```'
+    tv logcat -d -s QuietTV | grep -v beginning | tail -15 | cut -c1-160
+    echo '```'
+  } > "$f"
+  cat "$f"
+  echo
+  echo "Saved to $(pwd)/$f. Paste it into an issue: $HELP"
+}
+
 # ------------------------------------------------------------------------------------------ main
 
 [ $# -ge 2 ] || usage
@@ -358,5 +413,6 @@ case "$command" in
   reapply) cmd_reapply ;;
   status) cmd_status ;;
   undo) cmd_undo ;;
+  report) cmd_report ;;
   *) usage ;;
 esac

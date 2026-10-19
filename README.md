@@ -40,8 +40,8 @@ You need a computer on the same Wi-Fi as your TV.
 
    The TV asks *"Allow debugging?"*. Tick *Always allow* and press **Allow**. Then press Home on your remote.
 
-> You can also just ask an AI coding assistant like Claude Code:
-> *"Set up QuietTV from github.com/vineetjk/quiettv on my TV at 192.168.1.50. Ask me before every change."*
+> **Using an AI coding assistant?** (Claude Code, Codex, Gemini CLI...) Copy the ready-made prompt in
+> [SETUP-WITH-AI.md](SETUP-WITH-AI.md). It does all of this with you, step by step, and asks before every change.
 
 ## Commands
 
@@ -54,6 +54,7 @@ You need a computer on the same Wi-Fi as your TV.
 | `sh quiettv.sh status <ip>` | Shows everything QuietTV changed, and anything the TV switched back. |
 | `sh quiettv.sh reapply <ip>` | Puts back changes the TV undid (some TVs do this after every restart). |
 | `sh quiettv.sh undo <ip>` | Puts your TV back exactly the way it was. |
+| `sh quiettv.sh report <ip>` | Collects details to paste into an issue when you need help. |
 
 Every change is asked about first and saved in a list on the TV. That's how `status`, `reapply` and `undo` work from any computer.
 
@@ -70,6 +71,15 @@ Every change is asked about first and saved in a list on the TV. That's how `sta
 | Home opens the old home screen again | `sh quiettv.sh reapply <ip>`. This happens if QuietTV gets "force stopped", so avoid doing that. |
 | Apps came back after a restart | `sh quiettv.sh reapply <ip>` |
 | I want everything back to normal | `sh quiettv.sh undo <ip>` |
+
+## Need help?
+
+Stuck at any step? You're not on your own:
+
+1. Run `sh quiettv.sh report <ip>`. It collects your TV model, Android version and what QuietTV changed, and leaves out your IP address.
+2. [Open an issue](https://github.com/vineetjk/quiettv/issues/new/choose), pick **Setup help**, and paste the report in.
+
+Someone (the author or someone else from the community) will help you sort it out. Got it working on a TV that isn't listed yet? The **My TV** form helps the next person with the same TV.
 
 ## Safety
 

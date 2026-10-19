@@ -1,0 +1,73 @@
+name: Setup help
+description: Something didn't work while setting up QuietTV. We'll help you get it working.
+title: "[Help] <TV brand and model>: <what went wrong>"
+labels: [setup-help]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Sorry it didn't go smoothly. Fill in what you can; the report below is the most useful part.
+        Your TV is safe to leave as it is. If you want everything back to normal right now: `sh quiettv.sh undo <TV_IP>`.
+  - type: input
+    id: tv
+    attributes:
+      label: TV brand and model
+      description: From Settings > System > About (e.g. "Acer R3G", "Sony KD-55X80K", "Chromecast with Google TV").
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android / Google TV version
+      placeholder: e.g. Google TV 14, Android TV 11
+  - type: dropdown
+    id: how
+    attributes:
+      label: How were you setting it up?
+      options:
+        - By hand with quiettv.sh
+        - With an AI assistant (Claude Code, Codex, ...)
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: step
+    attributes:
+      label: Where did it go wrong?
+      options:
+        - Turning on developer mode / finding the IP address
+        - Connecting (adb connect, "Allow debugging?")
+        - scan
+        - clean
+        - tune
+        - install (the home screen)
+        - The Home button doesn't open QuietTV
+        - After a restart
+        - undo
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead. Error messages help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Report
+      description: Run `sh quiettv.sh report <TV_IP>` and paste what it prints. It leaves out your IP address. If you can't connect at all, paste the output of `adb devices` instead.
+      render: markdown
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else? (screenshots or photos of the TV screen are welcome)
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I checked that what I pasted doesn't include anything private.
+          required: true

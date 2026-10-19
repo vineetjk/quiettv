@@ -1,0 +1,39 @@
+name: My TV (works / doesn't work)
+description: Tell us how QuietTV runs on your TV, so others with the same TV know what to expect.
+title: "[TV] <brand and model>: <works / partly works / doesn't work>"
+labels: [tv-report]
+body:
+  - type: input
+    id: tv
+    attributes:
+      label: TV brand and model
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android / Google TV version
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What worked?
+      options:
+        - label: Home on the remote opens QuietTV
+        - label: Opening apps and coming back with Back or Home
+        - label: HDMI tiles open the right input
+        - label: QuietTV is still there after a restart
+        - label: Apps turned off with `clean` stayed off after a restart
+        - label: Other remote buttons (Netflix, YouTube, Input...) still work
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything that didn't work, apps your TV turned back on, or apps you found safe to turn off (with what they do).
+  - type: textarea
+    id: report
+    attributes:
+      label: Report
+      description: Output of `sh quiettv.sh report <TV_IP>` (optional, but very helpful).
+      render: markdown

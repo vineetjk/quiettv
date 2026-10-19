@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How QuietTV works (and why)
+    url: https://github.com/vineetjk/quiettv/blob/main/docs/RESEARCH.md
+    about: Background on the Home button, TVs that turn apps back on, and what really saves memory.
