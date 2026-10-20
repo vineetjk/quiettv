@@ -9,6 +9,7 @@
 #   sh quiettv.sh reapply <TV_IP>             put back changes the TV undid (some TVs do at every restart)
 #   sh quiettv.sh undo    <TV_IP>             put everything back the way it was
 #   sh quiettv.sh report  <TV_IP>             details to paste into a GitHub issue if you need help
+#   sh quiettv.sh dev     <TV_IP> <github-user> [green|teal]   Dev mode: your GitHub graph on the home screen
 #
 # Every change is asked about first (YES=1 answers yes to everything) and written to a list on the TV,
 # so `reapply` and `undo` work from any computer. Apps are turned off, never uninstalled. QuietTV never
@@ -29,7 +30,7 @@ die() {
   exit 1
 }
 
-usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 connect() {
   case "$1" in
@@ -353,6 +354,27 @@ cmd_undo() {
   echo "Done. Your TV is back the way it was."
 }
 
+# ------------------------------------------------------------------------------------------ dev
+
+# Dev mode shows a GitHub contribution graph on the home screen. It reads the public calendar for the
+# username (no token). This sets it from the computer, so nobody has to type on the TV.
+cmd_dev() {
+  user=${1:-}; pal=${2:-}
+  case "$user" in
+    '') die "Usage: sh quiettv.sh dev <TV_IP> <github-username> [green|teal]   or   sh quiettv.sh dev <TV_IP> off" ;;
+    off) set -- --ez dev false ;;
+    *) printf '%s\n' "$user" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9]|-[A-Za-z0-9]){0,38}$' || die "That isn't a valid GitHub username."
+       case "$pal" in ''|green|teal) ;; *) die "Colours can be green or teal." ;; esac
+       set -- --ez dev true --es github "$user"
+       [ -n "$pal" ] && set -- "$@" --es palette "$pal" ;;
+  esac
+  tv pm list packages "$PKG" | grep -qx "package:$PKG" || die "Install QuietTV first: sh quiettv.sh install $TV"
+  tv am start -a android.intent.action.MAIN -c android.intent.category.HOME -n "$PKG/.HomeActivity" \
+    --es stamp "$(date +%s)" "$@" >/dev/null
+  if [ "$user" = off ]; then echo "Dev mode is off."
+  else echo "Dev mode is on for @$user. The graph appears on the home screen in a few seconds (QuietTV reads github.com)."; fi
+}
+
 # ------------------------------------------------------------------------------------------ report
 
 # Everything a helper needs to understand a problem, as Markdown for a GitHub issue. Leaves out the
@@ -414,5 +436,6 @@ case "$command" in
   status) cmd_status ;;
   undo) cmd_undo ;;
   report) cmd_report ;;
+  dev) cmd_dev "${1:-}" "${2:-}" ;;
   *) usage ;;
 esac

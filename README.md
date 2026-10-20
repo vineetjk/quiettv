@@ -63,6 +63,7 @@ You need a computer on the same Wi-Fi as your TV.
 | `sh quiettv.sh reapply <ip>` | Puts back changes the TV undid (some TVs do this after every restart). |
 | `sh quiettv.sh undo <ip>` | Puts your TV back exactly the way it was. |
 | `sh quiettv.sh report <ip>` | Collects details to paste into an issue when you need help. |
+| `sh quiettv.sh dev <ip> <github-user> [green\|teal]` | Turns on Dev mode: your GitHub contribution graph on the home screen. `dev <ip> off` turns it off. |
 
 Every change is asked about first and saved in a list on the TV. That's how `status`, `reapply` and `undo` work from any computer.
 
@@ -71,6 +72,20 @@ Every change is asked about first and saved in a list on the TV. That's how `sta
 - **OK** opens an app. **Hold OK** (or press Menu) to move it, remove it, or see App info.
 - **Add app** puts any installed app on the home screen. **All apps** shows everything.
 - **Original home** opens the TV's own home screen once. Press Home to come back.
+
+## Dev mode
+
+For developers: your **GitHub contribution graph** right on the TV, with your yearly total, current and longest streak, and today's count, over a subtle dot-grid backdrop. Your apps and inputs move into their own rows below it, so nothing is ever covered.
+
+![QuietTV in Dev mode, showing a GitHub contribution graph above the apps](docs/dev-mode.png)
+
+Turn it on from the **✦ QuietTV** tile on the home screen: switch on **Dev mode**, type your GitHub username, and pick **GitHub green** or **QuietTV teal**. Or, from a computer:
+
+```sh
+sh quiettv.sh dev 192.168.1.50 your-github-name
+```
+
+It reads the same public calendar your GitHub profile shows, so no account, password or token is needed, and only public contributions appear. It refreshes every 3 hours, and keeps the last graph so it still shows when you're offline. QuietTV uses about 55 MB of memory in Dev mode.
 
 ## If something's off
 
@@ -93,7 +108,8 @@ Someone (the author or someone else from the community) will help you sort it ou
 
 - Apps are only **turned off**, never deleted.
 - QuietTV never touches what the TV needs to run: Google Play, Settings, the keyboard, Bluetooth, HDMI inputs, the TV's own home screen or setup app. The full list is in [`lists/protected.txt`](lists/protected.txt).
-- The Home-button helper only sees the Home key and which app opened. It can't read your screen or what you type, and the app has no internet permission. [Source](app/src/com/quiettv/home/HomeGuard.java)
+- The Home-button helper only sees the Home key and which app opened. It can't read your screen or what you type. [Source](app/src/com/quiettv/home/HomeGuard.java)
+- QuietTV only goes online when **Dev mode** is on, and then only to github.com to read your public contribution calendar. With Dev mode off, it makes no network requests at all.
 - Tested on an Acer Google TV (Android 14). Other TVs should work, but use it at your own risk.
 
 ## Build it yourself

@@ -27,6 +27,7 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -44,9 +45,13 @@ public class HomeActivity extends Activity {
     private static final int COLS = 6;
     private static final int PICK_APP = 1;
     static final String ADD = "shortcut:add", ALL = "shortcut:all", SETTINGS = "shortcut:settings",
-            PLAY = "shortcut:play", STOCK = "shortcut:stock", NET = "shortcut:net";
+            PLAY = "shortcut:play", STOCK = "shortcut:stock", NET = "shortcut:net", QUIET = "shortcut:quiettv";
 
     private LinearLayout column;
+    private ScrollView scroll;
+    private DevPanel devPanel;
+    private String devProblem;
+    private int uiVersion = -1;
     private TextView clock, date, netText, memText;
     private ImageView netIcon, memIcon;
     private boolean chipFocused;
@@ -67,7 +72,7 @@ public class HomeActivity extends Activity {
         super.onCreate(b);
         applyConfig(getIntent());
 
-        ScrollView scroll = new ScrollView(this);
+        scroll = new ScrollView(this);
         scroll.setBackground(Ui.background(this));
         scroll.setFillViewport(true);
         scroll.setVerticalScrollBarEnabled(false);
@@ -102,8 +107,32 @@ public class HomeActivity extends Activity {
         tf.addAction(Intent.ACTION_TIME_CHANGED);
         tf.addAction(Intent.ACTION_TIMEZONE_CHANGED);
         registerReceiver(tick, tf);
+        int v = Apps.prefs(this).getInt(SettingsActivity.UI_VERSION, 0);
+        if (v != uiVersion) {
+            uiVersion = v;
+            dirty = true;
+        }
         if (dirty) rebuild();
         updateClock();
+        maybeFetchContributions();
+    }
+
+    /** Dev mode only: refresh the GitHub graph if it's more than a few hours old. */
+    private void maybeFetchContributions() {
+        SharedPreferences p = Apps.prefs(this);
+        if (!SettingsActivity.devOn(p)) return;
+        String user = p.getString(SettingsActivity.GITHUB, "");
+        if (!GitHub.due(this, user)) return;
+        GitHub.refresh(this, user, cal -> {
+            devProblem = cal == null ? "GitHub couldn't be reached" : null;
+            if (devPanel != null) showDev();
+        });
+    }
+
+    private void showDev() {
+        SharedPreferences p = Apps.prefs(this);
+        String user = p.getString(SettingsActivity.GITHUB, "");
+        devPanel.show(user, GitHub.cached(this, user), SettingsActivity.palette(p), devProblem);
     }
 
     @Override protected void onPause() {
@@ -142,6 +171,12 @@ public class HomeActivity extends Activity {
         SharedPreferences.Editor e = p.edit().putString("stamp", stamp);
         String apps = i.getStringExtra("apps");
         if (apps != null) e.putString("apps", apps.replace("\"", "").replace(" ", ""));
+        // Dev mode from `quiettv.sh dev`: --ez dev true|false, --es github <name>, --es palette green|teal
+        if (i.hasExtra("dev")) e.putBoolean(SettingsActivity.DEV, i.getBooleanExtra("dev", false));
+        String gh = i.getStringExtra("github");
+        if (gh != null && (gh.isEmpty() || GitHub.validUser(gh))) e.putString(SettingsActivity.GITHUB, gh);
+        String pal = i.getStringExtra("palette");
+        if ("green".equals(pal) || "teal".equals(pal)) e.putString(SettingsActivity.PALETTE, pal);
         e.apply();
         return true;
     }
@@ -152,19 +187,33 @@ public class HomeActivity extends Activity {
         dirty = false;
         if (getCurrentFocus() instanceof Tile) focusKey = ((Tile) getCurrentFocus()).key;
         column.removeAllViews();
-        column.addView(header());
+        final boolean dev = SettingsActivity.devOn(Apps.prefs(this));
+        column.setPadding(dp(56), dp(dev ? 20 : 30), dp(56), dp(dev ? 16 : 24));
+        scroll.setBackground(dev ? new DotGrid(Ui.background(this), dp(26), 1.2f * getResources().getDisplayMetrics().density) : Ui.background(this));
+        column.addView(header(dev));
 
         int contentW = getResources().getDisplayMetrics().widthPixels - dp(112);
         int gap = dp(18);
         int w = (contentW - gap * (COLS - 1)) / COLS;
         int h = w * 9 / 16;
 
+        // Dev mode: the GitHub graph sits in its own band above the apps, so tiles never cover it.
+        if (dev) {
+            devPanel = new DevPanel(this, contentW);
+            LinearLayout.LayoutParams devLp = new LinearLayout.LayoutParams(-1, -2);
+            devLp.topMargin = dp(6);
+            column.addView(devPanel, devLp);
+            showDev();
+        } else {
+            devPanel = null;
+        }
+
         // "YOUR APPS" on the left, the how-to hint on the right of the same line.
         LinearLayout appsHead = new LinearLayout(this);
         appsHead.setGravity(Gravity.BOTTOM);
-        appsHead.addView(Ui.section(this, "Your apps"), new LinearLayout.LayoutParams(0, -2, 1));
+        appsHead.addView(section("Your apps", dev), new LinearLayout.LayoutParams(0, -2, 1));
         TextView hint = Ui.text(this, "Hold OK on an app to move or remove it", 12, Ui.FAINT);
-        hint.setPadding(0, 0, dp(2), dp(12));
+        hint.setPadding(0, 0, dp(2), dp(dev ? 8 : 12));
         appsHead.addView(hint);
         column.addView(appsHead);
         List<Tile> apps = new ArrayList<>();
@@ -179,29 +228,62 @@ public class HomeActivity extends Activity {
         Tile add = new Tile(this, ADD, w, h, Tile.ADD, Ui.icon(this, R.drawable.ic_add, Ui.MUTED), "Add app");
         add.setOnClickListener(v -> pickApp());
         apps.add(add);
-        addRows(apps, w, h, gap);
+        // Dev mode keeps the apps to one row that scrolls sideways, so the screen never overflows.
+        if (dev) addScrollRow(apps, gap);
+        else addRows(apps, w, h, gap);
 
-        column.addView(Ui.section(this, "Inputs & more"));
-        int sh = Math.max(h * 2 / 3, dp(66));
+        column.addView(section("Inputs & more", dev));
+        List<TvInputInfo> inputs = hdmiInputs();
+        final ComponentName stock = Apps.stockHome(this);
+        boolean play = Apps.installed(this, "com.android.vending");
+        int n = inputs.size() + 3 + (play ? 1 : 0) + (stock != null ? 1 : 0);
+        // Shortcuts share one row: narrower tiles when there's room for all of them, scrolling when not.
+        int sw = Math.max(dp(104), Math.min(w, (contentW - gap * (n - 1)) / n));
+        int sh = dev ? dp(58) : Math.max(h * 2 / 3, dp(66));
         List<Tile> more = new ArrayList<>();
-        for (TvInputInfo in : hdmiInputs()) {
+        for (TvInputInfo in : inputs) {
             final String id = in.getId();
-            Tile t = new Tile(this, "input:" + id, w, sh, Tile.SHORTCUT, Ui.icon(this, R.drawable.ic_hdmi, Ui.TEXT), inputLabel(in));
+            Tile t = new Tile(this, "input:" + id, sw, sh, Tile.SHORTCUT, Ui.icon(this, R.drawable.ic_hdmi, Ui.TEXT), inputLabel(in));
             t.setOnClickListener(v -> openInput(id));
             more.add(t);
         }
-        more.add(shortcut(SETTINGS, R.drawable.ic_settings, "Settings", w, sh, v -> startSafely(new Intent(Settings.ACTION_SETTINGS))));
-        if (Apps.installed(this, "com.android.vending"))
-            more.add(shortcut(PLAY, R.drawable.ic_play, "Play Store", w, sh, v -> launch("com.android.vending")));
-        more.add(shortcut(ALL, R.drawable.ic_apps, "All apps", w, sh, v -> startActivity(new Intent(this, AppsActivity.class))));
-        final ComponentName stock = Apps.stockHome(this);
-        if (stock != null)
-            more.add(shortcut(STOCK, R.drawable.ic_home, "Original home", w, sh, v -> openStockHome(stock)));
-        addRows(more, w, sh, gap);
-
+        more.add(shortcut(SETTINGS, R.drawable.ic_settings, "Settings", sw, sh, v -> startSafely(new Intent(Settings.ACTION_SETTINGS))));
+        if (play) more.add(shortcut(PLAY, R.drawable.ic_play, "Play Store", sw, sh, v -> launch("com.android.vending")));
+        more.add(shortcut(ALL, R.drawable.ic_apps, "All apps", sw, sh, v -> startActivity(new Intent(this, AppsActivity.class))));
+        if (stock != null) more.add(shortcut(STOCK, R.drawable.ic_home, "Original home", sw, sh, v -> openStockHome(stock)));
+        more.add(shortcut(QUIET, R.drawable.ic_sparkle, "QuietTV", sw, sh, v -> startActivity(new Intent(this, SettingsActivity.class))));
+        addScrollRow(more, gap);
 
         updateClock();
         restoreFocus(apps);
+    }
+
+    private TextView section(String s, boolean dev) {
+        TextView t = Ui.section(this, s);
+        if (dev) t.setPadding(dp(2), dp(10), 0, dp(8));
+        return t;
+    }
+
+    /** One row of tiles that scrolls sideways when it doesn't fit, with a soft fade at the edges. */
+    private void addScrollRow(List<Tile> tiles, int gap) {
+        HorizontalScrollView hs = new HorizontalScrollView(this);
+        hs.setHorizontalScrollBarEnabled(false);
+        hs.setHorizontalFadingEdgeEnabled(true);
+        hs.setFadingEdgeLength(dp(36));
+        hs.setClipChildren(false);
+        hs.setClipToPadding(false);
+        hs.setPadding(0, dp(4), 0, dp(4));
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setClipChildren(false);
+        row.setClipToPadding(false);
+        for (int j = 0; j < tiles.size(); j++) {
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            if (j > 0) lp.leftMargin = gap;
+            row.addView(tiles.get(j), lp);
+        }
+        hs.addView(row);
+        column.addView(hs, new LinearLayout.LayoutParams(-1, -2));
     }
 
     private Tile shortcut(String key, int icon, String title, int w, int h, View.OnClickListener l) {
@@ -228,17 +310,17 @@ public class HomeActivity extends Activity {
     }
 
     /** The clock on the left; the QuietTV logo and a network/memory chip on the right. */
-    private View header() {
+    private View header(boolean dev) {
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.TOP);
 
         LinearLayout left = new LinearLayout(this);
         left.setOrientation(LinearLayout.VERTICAL);
-        clock = Ui.text(this, "", 66, Ui.TEXT);
+        clock = Ui.text(this, "", dev ? 48 : 66, Ui.TEXT);
         clock.setTypeface(Typeface.create("sans-serif-thin", Typeface.NORMAL));
         date = Ui.text(this, "", 18, Ui.MUTED);
-        date.setPadding(dp(4), dp(10), 0, 0);
+        date.setPadding(dp(4), dp(dev ? 6 : 10), 0, 0);
         left.addView(clock);
         left.addView(date);
         bar.addView(left, new LinearLayout.LayoutParams(0, -2, 1));

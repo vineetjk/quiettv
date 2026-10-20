@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.quiettv.home" android:versionCode="4" android:versionName="1.1.0">
+    package="com.quiettv.home" android:versionCode="5" android:versionName="1.2.0">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- Only used in Dev mode, to read your public GitHub contribution calendar from github.com. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Android 11+ only lets an app see the apps it asks about: launchable apps. -->
     <queries>
@@ -39,6 +41,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".SettingsActivity" android:exported="false"
+            android:excludeFromRecents="true" android:screenOrientation="landscape" />
 
         <activity android:name=".AppsActivity" android:exported="false"
             android:excludeFromRecents="true" android:screenOrientation="landscape" />
